@@ -1,12 +1,61 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import AddPlayers from '@/components/game/AddPlayers';
+import MainMenu from '@/components/game/MainMenu';
+import GamePlay from '@/components/game/GamePlay';
+import Settings from '@/components/game/Settings';
+
+export type Player = {
+  name: string;
+  gender: 'male' | 'female';
+};
+
+export type Question = {
+  text: string;
+  type: 'truth' | 'dare';
+  adult: boolean;
+};
 
 const Index = () => {
+  const [screen, setScreen] = useState<'add-players' | 'menu' | 'game' | 'settings'>('add-players');
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [adultMode, setAdultMode] = useState(false);
+  const [customQuestions, setCustomQuestions] = useState<Question[]>([]);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4 color-black text-black">Добро пожаловать!</h1>
-        <p className="text-xl text-gray-600">тут будет отображаться ваш проект</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-blue-500 p-4">
+      {screen === 'add-players' && (
+        <AddPlayers 
+          players={players}
+          setPlayers={setPlayers}
+          onStart={() => setScreen('menu')}
+        />
+      )}
+      
+      {screen === 'menu' && (
+        <MainMenu 
+          onStartGame={() => setScreen('game')}
+          onSettings={() => setScreen('settings')}
+          adultMode={adultMode}
+          setAdultMode={setAdultMode}
+        />
+      )}
+      
+      {screen === 'game' && (
+        <GamePlay 
+          players={players}
+          adultMode={adultMode}
+          customQuestions={customQuestions}
+          onBack={() => setScreen('menu')}
+        />
+      )}
+      
+      {screen === 'settings' && (
+        <Settings 
+          customQuestions={customQuestions}
+          setCustomQuestions={setCustomQuestions}
+          onBack={() => setScreen('menu')}
+        />
+      )}
     </div>
   );
 };
