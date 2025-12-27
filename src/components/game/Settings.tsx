@@ -1,35 +1,114 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Icon from '@/components/ui/icon';
 import { Question } from '@/pages/Index';
+import { useToast } from '@/hooks/use-toast';
 
 type Props = {
   customQuestions: Question[];
   setCustomQuestions: (questions: Question[]) => void;
   onBack: () => void;
+  user: { id: string; username: string; token: string } | null;
 };
 
-const Settings = ({ customQuestions, setCustomQuestions, onBack }: Props) => {
+const API_URL = 'https://functions.poehali.dev/058056a9-1ad8-4173-94c8-2c161a2fa6d7';
+
+const Settings = ({ customQuestions, setCustomQuestions, onBack, user }: Props) => {
   const [questionText, setQuestionText] = useState('');
   const [questionType, setQuestionType] = useState<'truth' | 'dare'>('truth');
   const [isAdult, setIsAdult] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const addQuestion = () => {
-    if (questionText.trim()) {
+  useEffect(() => {
+    if (user) {
+      loadQuestions();
+    }
+  }, [user]);
+
+  const loadQuestions = async () => {
+    if (!user) return;
+
+    try {
+      const response = await fetch(API_URL, {
+        method: 'GET',
+        headers: {
+          'X-User-Id': user.id,
+        },
+      });
+
+      const data = await response.json();
+      if (response.ok && data.questions) {
+        setCustomQuestions(data.questions.map((q: any) => ({
+          text: q.text,
+          type: q.type,
+          adult: q.adult
+        })));
+      }
+    } catch (error) {
+      console.error('Failed to load questions:', error);
+    }
+  };
+
+  const addQuestion = async () => {
+    if (!questionText.trim()) return;
+
+    if (!user) {
       setCustomQuestions([
         ...customQuestions,
         { text: questionText.trim(), type: questionType, adult: isAdult }
       ]);
       setQuestionText('');
+      toast({
+        title: 'Вопрос добавлен',
+        description: 'Войдите в аккаунт, чтобы сохранить вопросы',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': user.id,
+        },
+        body: JSON.stringify({
+          text: questionText.trim(),
+          type: questionType,
+          adult: isAdult
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        await loadQuestions();
+        setQuestionText('');
+        toast({
+          title: 'Успешно!',
+          description: 'Вопрос сохранен',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось сохранить вопрос',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   const removeQuestion = (index: number) => {
-    setCustomQuestions(customQuestions.filter((_, i) => i !== index));
+    if (!user) {
+      setCustomQuestions(customQuestions.filter((_, i) => i !== index));
+      return;
+    }
   };
 
   const truthQuestions = customQuestions.filter(q => q.type === 'truth');
@@ -102,11 +181,26 @@ const Settings = ({ customQuestions, setCustomQuestions, onBack }: Props) => {
           <Button
             onClick={addQuestion}
             className="w-full h-12 text-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-            disabled={!questionText.trim()}
+            disabled={!questionText.trim() || loading}
           >
-            <Icon name="Plus" className="mr-2" />
-            Добавить
+            {loading ? (
+              <>
+                <Icon name="Loader2" className="mr-2 animate-spin" />
+                Сохранение...
+              </>
+            ) : (
+              <>
+                <Icon name="Plus" className="mr-2" />
+                {user ? 'Сохранить' : 'Добавить (без сохранения)'}
+              </>
+            )}
           </Button>
+          
+          {!user && (
+            <p className="text-sm text-center text-orange-600 font-semibold">
+              ⚠️ Войдите в аккаунт, чтобы вопросы сохранялись
+            </p>
+          )}
         </div>
 
         {customQuestions.length > 0 && (

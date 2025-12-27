@@ -1,0 +1,33 @@
+{
+  "tests": [
+    {
+      "name": "Get user questions",
+      "method": "GET",
+      "headers": {
+        "X-User-Id": "1"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "questions": []
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Add new question",
+      "method": "POST",
+      "headers": {
+        "X-User-Id": "1"
+      },
+      "body": {
+        "text": "Test question?",
+        "type": "truth",
+        "adult": false
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
